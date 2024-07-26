@@ -1,0 +1,1 @@
+C:\Users\HP\deno\target\debug\deno.exe: C:\Users\HP\deno\src\editor\editorcommand.rs C:\Users\HP\deno\src\editor\terminal.rs C:\Users\HP\deno\src\editor\view\buffer.rs C:\Users\HP\deno\src\editor\view\line.rs C:\Users\HP\deno\src\editor\view\location.rs C:\Users\HP\deno\src\editor\view.rs C:\Users\HP\deno\src\editor.rs C:\Users\HP\deno\src\main.rs
