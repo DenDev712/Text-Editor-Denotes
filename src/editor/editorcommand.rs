@@ -24,7 +24,7 @@ impl TryFrom<Event> for EditorCommand {
     fn try_from(event: Event) -> Result<Self, Self::Error> {
         match event {
             Event::Key(KeyEvent {
-                code, modifiers, ..
+                code, modifiers,..
             }) => match (code, modifiers) {
                 (KeyCode::Char('q'), KeyModifiers::CONTROL) => Ok(Self::Quit),
                 (KeyCode::Up, _) => Ok(Self::Move(Direction::Up)),

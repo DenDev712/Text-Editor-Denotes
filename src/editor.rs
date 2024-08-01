@@ -1,24 +1,19 @@
 use crossterm::event::{read, Event, KeyEvent, KeyEventKind};
-
 use std::{
     env,
     io::Error,
     panic::{set_hook, take_hook},
 };
-
 mod editorcommand;
 mod terminal;
 mod view;
 use terminal::Terminal;
 use view::View;
-
 use editorcommand::EditorCommand;
-
 pub struct Editor {
     should_quit: bool,
     view: View,
 }
-
 impl Editor {
     pub fn new() -> Result<Self, Error> {
         let current_hook = take_hook();
@@ -54,7 +49,9 @@ impl Editor {
             }
         }
     }
-
+    // needless_pass_by_value: Event is not huge, so there is not a
+    // performance overhead in passing by value, and pattern matching in this
+    // function would be needlessly complicated if we pass by reference here.
     #[allow(clippy::needless_pass_by_value)]
     fn evaluate_event(&mut self, event: Event) {
         let should_process = match &event {
@@ -62,7 +59,6 @@ impl Editor {
             Event::Resize(_, _) => true,
             _ => false,
         };
-
         if should_process {
             match EditorCommand::try_from(event) {
                 Ok(command) => {
@@ -79,17 +75,12 @@ impl Editor {
                     }
                 }
             }
-        } else {
-            #[cfg(debug_assertions)]
-            {
-                panic!("Received and discarded unsupported or non-press event.");
-            }
-        }
+        } 
     }
     fn refresh_screen(&mut self) {
         let _ = Terminal::hide_caret();
         self.view.render();
-        let _ = Terminal::move_caret_to(self.view.get_position());
+        let _ = Terminal::move_caret_to(self.view.caret_position());
         let _ = Terminal::show_caret();
         let _ = Terminal::execute();
     }
