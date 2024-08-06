@@ -9,11 +9,14 @@ mod terminal;
 mod view;
 use terminal::Terminal;
 use view::View;
+
 use editorcommand::EditorCommand;
+
 pub struct Editor {
     should_quit: bool,
     view: View,
 }
+
 impl Editor {
     pub fn new() -> Result<Self, Error> {
         let current_hook = take_hook();
@@ -59,6 +62,7 @@ impl Editor {
             Event::Resize(_, _) => true,
             _ => false,
         };
+
         if should_process {
             match EditorCommand::try_from(event) {
                 Ok(command) => {
@@ -75,7 +79,12 @@ impl Editor {
                     }
                 }
             }
-        } 
+        } else {
+            #[cfg(debug_assertions)]
+            {
+                panic!("Received and discarded unsupported or non-press event.");
+            }
+        }
     }
     fn refresh_screen(&mut self) {
         let _ = Terminal::hide_caret();
