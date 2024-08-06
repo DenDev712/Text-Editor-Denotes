@@ -28,7 +28,12 @@ pub struct Line {
 
 impl Line {
     pub fn from(line_str: &str) -> Self {
-        let fragments = line_str
+        let fragments = Self::str_to_fragments(line_str);
+        Self {fragments}
+    }
+
+    fn str_to_fragments(line_str: &str) -> Vec<TextFragment>{
+        line_str
         //turning the str in graphemes
         .graphemes(true)
         .map(|grapheme|{
@@ -50,9 +55,7 @@ impl Line {
                 rendered_width,
                 replacement,
             }
-        }).collect();
-
-        Self {fragments}
+        }).collect()
     }
     
     fn replacement_character(for_str: &str) -> Option<char> {
@@ -121,5 +124,19 @@ impl Line {
                 GraphemeWidth::Full => 2, 
             })
             .sum()
+    }
+
+    pub fn insert_char(&mut self, character:char, grapheme_index: usize){
+        let mut result = String::new();
+        for(index, fragment) in self.fragments.iter().enumerate(){
+            if index == grapheme_index{
+                result.push(character);
+            }
+            result.push_str(&fragment.grapheme);
+        }
+        if grapheme_index >= self.fragments.len(){
+            result.push(character);
+        }
+        self.fragments = Self::str_to_fragments(&result);
     }
 }
