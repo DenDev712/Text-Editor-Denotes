@@ -18,6 +18,8 @@ pub enum EditorCommand {
     Resize(Size),
     Quit,
     Insert(char),
+    Backspace,
+    Delete,
 }
 //for edge cases where usize < u16
 #[allow(clippy::as_conversions)] 
@@ -39,6 +41,8 @@ impl TryFrom<Event> for EditorCommand {
                 (KeyCode::PageUp, _) => Ok(Self::Move(Direction::PageUp)),
                 (KeyCode::Home, _) => Ok(Self::Move(Direction::Home)),
                 (KeyCode::End, _) => Ok(Self::Move(Direction::End)),
+                (KeyCode::Backspace, _) => Ok(Self::Backspace),
+                (KeyCode::Delete, _) => Ok(Self::Delete),
                 _ => Err(format!("Key Code not supported: {code:?}")),
             },
             Event::Resize(width_u16, height_u16) =>Ok(Self::Resize(Size{
