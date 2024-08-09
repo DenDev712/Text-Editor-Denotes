@@ -30,7 +30,8 @@ impl View {
             EditorCommand::Move(direction) => self.move_text_location(&direction),
             EditorCommand::Quit => {}
             EditorCommand::Insert(character) => self.insert_char(character),
-            EditorCommand::Backspace => self.backspace(),
+            EditorCommand::Backspace => self.delete_backward(),
+            EditorCommand::Enter => self.insert_newline(),
             EditorCommand::Delete => self.delete(),
         }
     }
@@ -48,7 +49,13 @@ impl View {
     }
 
     //text editing region
-    fn backspace(&mut self){
+
+    fn insert_newline(&mut self){
+        self.buffer.insert_newline(self.text_location);
+        self.move_text_location(&Direction::Right);
+        self.needs_redraw = true;
+    }
+    fn delete_backward(&mut self){
         //we can go left as long as we arent at the top left of the text
         if self.text_location.line_index != 0 || self.text_location.grapheme_index != 0{
             self.move_text_location(&Direction::Left);
