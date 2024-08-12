@@ -21,6 +21,7 @@ pub enum EditorCommand {
     Backspace,
     Delete,
     Enter,
+    Save,
 }
 //for edge cases where usize < u16
 #[allow(clippy::as_conversions)] 
@@ -32,6 +33,7 @@ impl TryFrom<Event> for EditorCommand {
                 code, modifiers, ..
             }) => match (code, modifiers) {
                 (KeyCode::Char('q'), KeyModifiers::CONTROL) => Ok(Self::Quit),
+                (KeyCode::Char('s'), KeyModifiers::CONTROL) => Ok(Self::Save),
                 //adding upercase by use keymodifiers shift
                 (KeyCode::Char(character), KeyModifiers::NONE | KeyModifiers::SHIFT) => {Ok(Self::Insert(character))}
                 (KeyCode::Tab, _) => Ok(Self::Insert('\t')),
