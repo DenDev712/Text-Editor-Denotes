@@ -3,15 +3,15 @@ use self::line::Line;
 use super::{
     editorcommand::{Direction, EditorCommand},
     terminal::{Position, Size, Terminal},
+    DocumentStatus,
 };
 mod buffer;
 use buffer::Buffer;
-
 mod line;
 const NAME: &str = env!("CARGO_PKG_NAME");
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 #[derive(Copy, Clone, Default)]
-pub struct Location{
+pub struct Location {
     pub grapheme_index: usize,
     pub line_index: usize,
 }
@@ -24,27 +24,30 @@ pub struct View {
 }
 
 impl View {
-    pub fn handle_command(&mut self, command: EditorCommand) {
-        match command {
-            EditorCommand::Resize(size) => self.resize(size),
-            EditorCommand::Move(direction) => self.move_text_location(&direction),
-            EditorCommand::Quit => {}
-            EditorCommand::Insert(character) => self.insert_char(character),
-            EditorCommand::Backspace => self.delete_backward(),
-            EditorCommand::Enter => self.insert_newline(),
-            EditorCommand::Delete => self.delete(),
-            EditorCommand::Save => self.save(),
+    pub fn new(margin_bottom: usize) -> Self {
+        let terminal_size = Terminal::size().unwrap_or_default();
+        Self {
+            buffer: Buffer::default(),
+            needs_redraw: true,
+            size: Size {
+                width: terminal_size.width,
+                height: terminal_size.height.saturating_sub(margin_bottom),
+            },
+            text_location: Location::default(),
+            scroll_offset: Position::default(),
         }
     }
 
-    
-    fn resize(&mut self, to: Size) {
-        self.size = to;
-        self.scroll_text_location_into_view();
-        self.needs_redraw = true;
+    pub fn get_status(&self) -> DocumentStatus {
+        DocumentStatus {
+            total_lines: self.buffer.height(),
+            current_line_index: self.text_location.line_index,
+            file_name: self.buffer.file_name.clone(),
+            is_modified: self.buffer.dirty,
+        }
     }
 
-    //file io region
+    // region: file i/o
     pub fn load(&mut self, file_name: &str) {
         if let Ok(buffer) = Buffer::load(file_name) {
             self.buffer = buffer;
@@ -52,54 +55,69 @@ impl View {
         }
     }
 
-    pub fn save(&self){
+    fn save(&mut self) {
         let _ = self.buffer.save();
     }
 
-    
-    //text editing region
+    // endregion
 
-    fn insert_newline(&mut self){
-        self.buffer.insert_newline(self.text_location);
-        self.move_text_location(&Direction::Right);
+    // region: command handling
+    pub fn handle_command(&mut self, command: EditorCommand) {
+        match command {
+            EditorCommand::Resize(size) => self.resize(size),
+            EditorCommand::Move(direction) => self.move_text_location(direction),
+            EditorCommand::Quit => {}
+            EditorCommand::Insert(character) => self.insert_char(character),
+            EditorCommand::Delete => self.delete(),
+            EditorCommand::Backspace => self.delete_backward(),
+            EditorCommand::Enter => self.insert_newline(),
+            EditorCommand::Save => self.save(),
+        }
+    }
+
+    fn resize(&mut self, to: Size) {
+        self.size = to;
+        self.scroll_text_location_into_view();
         self.needs_redraw = true;
     }
-    fn delete_backward(&mut self){
-        //we can go left as long as we arent at the top left of the text
-        if self.text_location.line_index != 0 || self.text_location.grapheme_index != 0{
-            self.move_text_location(&Direction::Left);
+    // endregion
+    // region: Text editing
+    fn insert_newline(&mut self) {
+        self.buffer.insert_newline(self.text_location);
+        self.move_text_location(Direction::Right);
+        self.needs_redraw = true;
+    }
+    fn delete_backward(&mut self) {
+        if self.text_location.line_index != 0 || self.text_location.grapheme_index != 0 {
+            self.move_text_location(Direction::Left);
             self.delete();
         }
     }
-
-    fn delete(&mut self){
+    fn delete(&mut self) {
         self.buffer.delete(self.text_location);
         self.needs_redraw = true;
     }
-    fn insert_char(&mut self, character: char){
+    fn insert_char(&mut self, character: char) {
         let old_len = self
-        .buffer
-        .lines
-        .get(self.text_location.line_index)
-        .map_or(0, Line::grapheme_count);
-        
+            .buffer
+            .lines
+            .get(self.text_location.line_index)
+            .map_or(0, Line::grapheme_count);
         self.buffer.insert_char(character, self.text_location);
-
         let new_len = self
-        .buffer
-        .lines
-        .get(self.text_location.line_index)
-        .map_or(0, Line::grapheme_count);
-
+            .buffer
+            .lines
+            .get(self.text_location.line_index)
+            .map_or(0, Line::grapheme_count);
         let grapheme_delta = new_len.saturating_sub(old_len);
-        if grapheme_delta > 0{
-            self.move_text_location(&Direction::Right);
+        if grapheme_delta > 0 {
+            //move right for an added grapheme (should be the regular case)
+            self.move_text_location(Direction::Right);
         }
-
         self.needs_redraw = true;
     }
-
-    //rendering region
+    // endregion
+    // region: Rendering
     pub fn render(&mut self) {
         if !self.needs_redraw {
             return;
@@ -126,7 +144,6 @@ impl View {
         }
         self.needs_redraw = false;
     }
-    
     fn render_line(at: usize, line_text: &str) {
         let result = Terminal::print_row(at, line_text);
         debug_assert!(result.is_ok(), "Failed to render line");
@@ -148,9 +165,8 @@ impl View {
         full_message.truncate(width);
         full_message
     }
-
-    //scrolling region
-
+    // endregion
+    // region: Scrolling
     fn scroll_vertically(&mut self, to: usize) {
         let Size { height, .. } = self.size;
         let offset_changed = if to < self.scroll_offset.row {
@@ -162,54 +178,52 @@ impl View {
         } else {
             false
         };
-        if offset_changed{
+        if offset_changed {
             self.needs_redraw = true;
         }
     }
     fn scroll_horizontally(&mut self, to: usize) {
-        let Size {width, ..} = self.size;
-        let offset_changed = if to < self.scroll_offset.col{
+        let Size { width, .. } = self.size;
+        let offset_changed = if to < self.scroll_offset.col {
             self.scroll_offset.col = to;
             true
-        }else if to >= self.scroll_offset.col.saturating_add(width){
+        } else if to >= self.scroll_offset.col.saturating_add(width) {
             self.scroll_offset.col = to.saturating_sub(width).saturating_add(1);
             true
-        }else{
+        } else {
             false
         };
-        if offset_changed{
+        if offset_changed {
             self.needs_redraw = true;
         }
     }
-
-    fn scroll_text_location_into_view(&mut self){
-        let Position {row, col} = self.text_location_to_position();
+    fn scroll_text_location_into_view(&mut self) {
+        let Position { row, col } = self.text_location_to_position();
         self.scroll_vertically(row);
         self.scroll_horizontally(col);
     }
-
-    //location and position handling region
-
-    pub fn caret_position(&self) -> Position{
+    // endregion
+    // region: Location and Position Handling
+    pub fn caret_position(&self) -> Position {
         self.text_location_to_position()
             .saturating_sub(self.scroll_offset)
     }
-
-    fn text_location_to_position(&self) -> Position{
+    fn text_location_to_position(&self) -> Position {
         let row = self.text_location.line_index;
-        let col = self.buffer.lines.get(row).map_or(0, |line|{
+        let col = self.buffer.lines.get(row).map_or(0, |line| {
             line.width_until(self.text_location.grapheme_index)
         });
-
-        Position {col, row}
+        Position { col, row }
     }
+    // endregion
 
-    //text location movement region
+    // region: text location movement
 
-    fn move_text_location(&mut self, direction: &Direction){
-        let Size {height, ..} = self.size;
-
-        match direction{
+    fn move_text_location(&mut self, direction: Direction) {
+        let Size { height, .. } = self.size;
+        // This match moves the positon, but does not check for all boundaries.
+        // The final boundarline checking happens after the match statement.
+        match direction {
             Direction::Up => self.move_up(1),
             Direction::Down => self.move_down(1),
             Direction::Left => self.move_left(),
@@ -221,7 +235,6 @@ impl View {
         }
         self.scroll_text_location_into_view();
     }
-
     fn move_up(&mut self, step: usize) {
         self.text_location.line_index = self.text_location.line_index.saturating_sub(step);
         self.snap_to_valid_grapheme();
@@ -247,13 +260,13 @@ impl View {
             self.move_down(1);
         }
     }
-      // clippy::arithmetic_side_effects: This function performs arithmetic calculations
+    // clippy::arithmetic_side_effects: This function performs arithmetic calculations
     // after explicitly checking that the target value will be within bounds.
     #[allow(clippy::arithmetic_side_effects)]
     fn move_left(&mut self) {
         if self.text_location.grapheme_index > 0 {
             self.text_location.grapheme_index -= 1;
-        } else if self.text_location.line_index > 0{
+        } else if self.text_location.line_index > 0 {
             self.move_up(1);
             self.move_to_end_of_line();
         }
@@ -268,7 +281,6 @@ impl View {
             .get(self.text_location.line_index)
             .map_or(0, Line::grapheme_count);
     }
-
     // Ensures self.location.grapheme_index points to a valid grapheme index by snapping it to the left most grapheme if appropriate.
     // Doesn't trigger scrolling.
     fn snap_to_valid_grapheme(&mut self) {
@@ -285,16 +297,6 @@ impl View {
     fn snap_to_valid_line(&mut self) {
         self.text_location.line_index = min(self.text_location.line_index, self.buffer.height());
     }
-}
 
-impl Default for View {
-    fn default() -> Self {
-        Self {
-            buffer: Buffer::default(),
-            needs_redraw: true,
-            size: Terminal::size().unwrap_or_default(),
-            text_location: Location::default(),
-            scroll_offset: Position::default(),
-        }
-    }
+    // endregion
 }
