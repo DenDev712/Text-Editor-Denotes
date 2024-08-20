@@ -1,5 +1,3 @@
-use crossterm::cursor::position;
-
 use super::{
     terminal::{Size, Terminal},
     DocumentStatus,
@@ -22,8 +20,8 @@ impl StatusBar {
             needs_redraw: true,
             margin_bottom,
             width: size.width,
-            position_y = 0,
-            is_visible = false,
+            position_y: 0,
+            is_visible: false,
         };
         status_bar.resize(size);
         status_bar
@@ -68,7 +66,7 @@ impl StatusBar {
             let remainder_len = size.width.saturating_sub(beginning.len());
             let status = format!("{beginning}{position_indicator:>remainder_len$}");
 
-            let to_print = if status.len() <= size.width(){
+            let to_print = if status.len() <= size.width{
                 status
             }else{
                 String::new()

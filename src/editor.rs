@@ -4,13 +4,13 @@ use std::{
     io::Error,
     panic::{set_hook, take_hook},
 };
-mod documentStatus;
+mod documentstatus;
 mod editorcommand;
 mod fileinfo;
 mod statusbar;
 mod terminal;
 mod view;
-use documentStatus::DocumentStatus;
+use documentstatus::DocumentStatus;
 use editorcommand::EditorCommand;
 use statusbar::StatusBar;
 use terminal::Terminal;
@@ -56,7 +56,7 @@ impl Editor {
         self.status_bar.update_status(status);
 
         //if the title has changed we write it to the terminal and update the internal title to stay synced with the terminal title
-        if status != self.title && matches!(Terminal::set_title(&title), Ok(())){
+        if title != self.title && matches!(Terminal::set_title(&title), Ok(())){
             self.title = title;
         }
     }
