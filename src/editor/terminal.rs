@@ -7,7 +7,7 @@ use crossterm::terminal::{
 use crossterm::{queue, Command};
 use std::io::{stdout, Error, Write};
 
-#[derive(Default, Copy, Clone)]
+#[derive(Default, Copy, Clone, Eq, PartialEq)]
 pub struct Size {
     pub height: usize,
     pub width: usize,
@@ -55,8 +55,7 @@ impl Terminal {
         Ok(())
     }
     /// Moves the caret to the given Position.
-    /// # Arguments
-    /// * `Position` - the  `Position`to move the caret to. Will be truncated to `u16::MAX` if bigger.
+    
     pub fn move_caret_to(position: Position) -> Result<(), Error> {
         #[allow(clippy::as_conversions, clippy::cast_possible_truncation)]
         Self::queue_command(MoveTo(position.col as u16, position.row as u16))?;
@@ -114,14 +113,13 @@ impl Terminal {
         )
     }
     /// Returns the current size of this Terminal.
-    /// Edge Case for systems with `usize` < `u16`:
-    /// * A `Size` representing the terminal size. Any coordinate `z` truncated to `usize` if `usize` < `z` < `u16`
+    /// Edge Case for systems with `usize` < `u16`
     pub fn size() -> Result<Size, Error> {
         let (width_u16, height_u16) = size()?;
-        // clippy::as_conversions: See doc above
+        
         #[allow(clippy::as_conversions)]
         let height = height_u16 as usize;
-        // clippy::as_conversions: See doc above
+        
         #[allow(clippy::as_conversions)]
         let width = width_u16 as usize;
         Ok(Size { height, width })
