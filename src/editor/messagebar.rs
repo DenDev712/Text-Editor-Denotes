@@ -33,9 +33,9 @@ pub struct MessageBar{
 }
 
 impl MessageBar{
-    pub fn update_message(&mut self, new_message: String){
+    pub fn update_message(&mut self, new_message: &str){
         self.current_message = Message{
-            text: new_message,
+            text: new_message.to_string(),
             time: Instant::now(),
         };
 
