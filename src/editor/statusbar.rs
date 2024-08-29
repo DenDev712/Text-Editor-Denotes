@@ -1,10 +1,6 @@
 use std::io::Error;
 
-use super::{
-    terminal::{Size, Terminal},
-    uicomponent::UIComponent,
-    DocumentStatus,
-};
+use super::{DocumentStatus, Size, Terminal, UIComponent};
 
 #[derive(Default)]
 pub struct StatusBar {
@@ -36,7 +32,7 @@ impl UIComponent for StatusBar{
         self.size = size;
     }
 
-    fn draw(&mut self, origin_y: usize) -> Result<(), Error>{
+    fn draw(&mut self, origin_row: usize) -> Result<(), Error>{
         let line_count = self.current_status.line_count();
         let modified_indicator = self.current_status.modified_to_string();
         
@@ -56,7 +52,7 @@ impl UIComponent for StatusBar{
             //else will return an empty string
             String::new()
         };
-        Terminal::print_inverted_row(origin_y, &to_print)?;
+        Terminal::print_inverted_row(origin_row, &to_print)?;
 
         Ok(())
     }
