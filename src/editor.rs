@@ -30,21 +30,35 @@ use view::View;
 use self::command::{
     Command::{self, Edit, Move, System},
     Edit::InsertNewline,
-    System::{Dismiss,Quit, Resize, Save},
+    System::{Dismiss,Quit, Resize, Save, Search},
 };
 
 pub const NAME: &str = env!("CARGO_PKG_NAME");
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 const QUIT_TIME: u8 = 3;
-#[derive(Default)]
+
+#[derive(Default,Eq, PartialEq)]
+enum PromptType{
+    Search,
+    Save,
+    #[default]
+    None,
+}
+
+impl PromptType{
+    fn is_none(&self) -> bool{
+        *self == Self::None
+    }
+}
 pub struct Editor {
     should_quit: bool,
     view: View,
     status_bar: StatusBar,
     title: String,
     message_bar: MessageBar,
-    command_bar: Option<CommandBar>,
+    command_bar: CommandBar,
+    promp_type: PrompType,
     terminal_size: Size,
     quit_times: u8,
 }
@@ -59,19 +73,14 @@ impl Editor {
         Terminal::initialize()?;
         let mut editor = Self::default();
         let size = Terminal::size().unwrap_or_default();
-        editor.resize(size);
-        editor
-            .message_bar
-            .update_message("HELP: Ctrl-S to Save | Ctrl-Q to Quit");
-
+        editor.handle_resize_command(size);
+        editor.update_message("Ctrl-F: Find | Ctrl-S: Save | Ctrl-Q: Quit");
 
         let args: Vec<String> = env::args().collect();
         //if a file name is given then load that said file 
         if let Some(file_name) = args.get(1){
             if editor.view.load(file_name).is_err(){
-                editor
-                    .message_bar
-                    .update_message(&format!("ERR: Could not open file: {file_name}"));
+                editor.update_message(&format!("ERR: Could not open file: {file_name}"));
             }
         }
         
@@ -79,35 +88,6 @@ impl Editor {
         Ok(editor)
     }
 
-    fn resize(&mut self, size: Size) {
-        self.terminal_size = size;
-        self.view.resize(Size {
-            height: size.height.saturating_sub(2),
-            width: size.width,
-        });
-        self.message_bar.resize(Size {
-            height: 1,
-            width: size.width,
-        });
-        self.status_bar.resize(Size {
-            height: 1,
-            width: size.width,
-        });
-        if let Some(command_bar) = &mut self.command_bar{
-            command_bar.resize(Size {
-                height: 1,
-                width: size.width,
-            });
-        }
-    }
-    fn refresh_status(&mut self) {
-        let status = self.view.get_status();
-        let title = format!("{} - {NAME}", status.file_name);
-        self.status_bar.update_status(status);
-        if title != self.title && matches!(Terminal::set_title(&title), Ok(())) {
-            self.title = title;
-        }
-    }
     pub fn run(&mut self) {
         loop {
             self.refresh_screen();
@@ -123,11 +103,50 @@ impl Editor {
                     }
                 }
             }
-            let status = self.view.get_status();
-            self.status_bar.update_status(status);
+            self.refresh_status();
         }
     }
 
+    fn refresh_screen(&mut self) {
+        if self.terminal_size.height == 0 || self.terminal_size.width == 0 {
+            return;
+        }
+        let bottom_bar_row = self.terminal_size.height.saturating_sub(1);
+        let _ = Terminal::hide_caret();
+        if self.in_prompt() {
+            self.command_bar.render(bottom_bar_row);
+        } else {
+            self.message_bar.render(bottom_bar_row);
+        }
+        if self.terminal_size.height > 1 {
+            self.status_bar
+                .render(self.terminal_size.height.saturating_sub(2));
+        }
+        if self.terminal_size.height > 2 {
+            self.view.render(0);
+        }
+        let new_caret_pos = if self.in_prompt() {
+            Position {
+                row: bottom_bar_row,
+                col: self.command_bar.caret_position_col(),
+            }
+        } else {
+            self.view.caret_position()
+        };
+
+        let _ = Terminal::move_caret_to(new_caret_pos);
+        let _ = Terminal::show_caret();
+        let _ = Terminal::execute();
+    }
+
+    fn refresh_status(&mut self) {
+        let status = self.view.get_status();
+        let title = format!("{} - {NAME}", status.file_name);
+        self.status_bar.update_status(status);
+        if title != self.title && matches!(Terminal::set_title(&title), Ok(())) {
+            self.title = title;
+        }
+    }
     
     fn evaluate_event(&mut self, event: Event) {
         let should_process = match &event {
