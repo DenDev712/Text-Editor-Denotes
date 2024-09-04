@@ -1,92 +1,84 @@
 use std::{fmt, ops::Range};
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
-
-#[derive(Clone, Copy)]
-enum GraphemeWidth{
+#[derive(Copy, Clone)]
+enum GraphemeWidth {
     Half,
     Full,
 }
-
-impl GraphemeWidth{
-    const fn saturating_add(self, other: usize) -> usize{
-        match self{
+impl GraphemeWidth {
+    const fn saturating_add(self, other: usize) -> usize {
+        match self {
             Self::Half => other.saturating_add(1),
             Self::Full => other.saturating_add(2),
         }
     }
 }
-
-struct TextFragment{
+struct TextFragment {
     grapheme: String,
     rendered_width: GraphemeWidth,
     replacement: Option<char>,
+    start_byte_idx: usize,
 }
-
 #[derive(Default)]
 pub struct Line {
     fragments: Vec<TextFragment>,
+    string: String,
 }
-
 impl Line {
     pub fn from(line_str: &str) -> Self {
         let fragments = Self::str_to_fragments(line_str);
-        Self {fragments}
+        Self {
+            fragments,
+            string: String::from(line_str),
+        }
     }
-
-    fn str_to_fragments(line_str: &str) -> Vec<TextFragment>{
+    fn str_to_fragments(line_str: &str) -> Vec<TextFragment> {
         line_str
-        //turning the str in graphemes
-        .graphemes(true)
-        .map(|grapheme|{
-            let (replacement, rendered_width) = Self::replacement_character(grapheme)
-            .map_or_else(
-                ||{
-                    let unicode_width = grapheme.width();
-                    let rendered_width = match unicode_width{
-                        0 | 1 => GraphemeWidth::Half,
-                        _ => GraphemeWidth::Full,
-                    };
-                    (None, rendered_width)
-                },
-                |replacement| (Some(replacement), GraphemeWidth::Half),
-            );
-
-            TextFragment{
-                grapheme:grapheme.to_string(),
-                rendered_width,
-                replacement,
-            }
-        }).collect()
+            .grapheme_indices(true)
+            .map(|(byte_idx, grapheme)| {
+                let (replacement, rendered_width) = Self::get_replacement_character(grapheme)
+                    .map_or_else(
+                        || {
+                            let unicode_width = grapheme.width();
+                            let rendered_width = match unicode_width {
+                                0 | 1 => GraphemeWidth::Half,
+                                _ => GraphemeWidth::Full,
+                            };
+                            (None, rendered_width)
+                        },
+                        |replacement| (Some(replacement), GraphemeWidth::Half),
+                    );
+                TextFragment {
+                    grapheme: grapheme.to_string(),
+                    rendered_width,
+                    replacement,
+                    start_byte_idx: byte_idx,
+                }
+            })
+            .collect()
     }
-    
-    fn replacement_character(for_str: &str) -> Option<char> {
+    fn rebuild_fragments(&mut self) {
+        self.fragments = Self::str_to_fragments(&self.string);
+    }
+    fn get_replacement_character(for_str: &str) -> Option<char> {
         let width = for_str.width();
         match for_str {
             " " => None,
-            //replaces the tab with space 
             "\t" => Some(' '),
-            //any visible whitespace will be replaced with a open box 
-            //to see if any grapheme cluster is a whitespace:
-            //.trim() removes the whitespace
-            //.is_empty() checks if anything remains after the trim
             _ if width > 0 && for_str.trim().is_empty() => Some('␣'),
             _ if width == 0 => {
                 let mut chars = for_str.chars();
                 if let Some(ch) = chars.next() {
-                    //if they are control characters they will be replaced with white vertical rectangle
-                    //is_control() checks if they are control characters
                     if ch.is_control() && chars.next().is_none() {
                         return Some('▯');
                     }
                 }
-                //for any other zero width character it will be replace by a dot
                 Some('·')
             }
             _ => None,
         }
     }
-
     pub fn get_visible_graphemes(&self, range: Range<usize>) -> String {
         if range.start >= range.end {
             return String::new();
@@ -112,82 +104,84 @@ impl Line {
         }
         result
     }
-
-    pub fn grapheme_count(&self) -> usize{
+    pub fn grapheme_count(&self) -> usize {
         self.fragments.len()
     }
-
-    pub fn width_until(&self, grapheme_index: usize) -> usize{
+    pub fn width_until(&self, grapheme_index: usize) -> usize {
         self.fragments
             .iter()
             .take(grapheme_index)
-            .map(|fragment| match fragment.rendered_width{
+            .map(|fragment| match fragment.rendered_width {
                 GraphemeWidth::Half => 1,
-                GraphemeWidth::Full => 2, 
+                GraphemeWidth::Full => 2,
             })
             .sum()
     }
-
-    pub fn width(&self) -> usize{
+    pub fn width(&self) -> usize {
         self.width_until(self.grapheme_count())
     }
-    pub fn insert_char(&mut self, character:char, at: usize){
-        let mut result = String::new();
-        for(index, fragment) in self.fragments.iter().enumerate(){
-            if index == at{
-                result.push(character);
-            }
-            result.push_str(&fragment.grapheme);
+    // Inserts a character into the line, or appends it at the end if at > len of the string
+    pub fn insert_char(&mut self, character: char, at: usize) {
+        if let Some(fragment) = self.fragments.get(at) {
+            self.string.insert(fragment.start_byte_idx, character);
+        } else {
+            self.string.push(character);
         }
-        if at >= self.fragments.len(){
-            result.push(character);
-        }
-        self.fragments = Self::str_to_fragments(&result);
+        self.rebuild_fragments();
     }
-
-    pub fn append_char(&mut self, character:char){
+    pub fn append_char(&mut self, character: char) {
         self.insert_char(character, self.grapheme_count());
     }
-
-    pub fn delete(&mut self, at: usize){
-        let mut result = String::new();
-
-        for (index, fragment) in self.fragments.iter().enumerate(){
-            if index != at{
-                result.push_str(&fragment.grapheme);
+    pub fn delete(&mut self, at: usize) {
+        if let Some(fragment) = self.fragments.get(at) {
+            let start = fragment.start_byte_idx;
+            let end = fragment
+                .start_byte_idx
+                .saturating_add(fragment.grapheme.len());
+            self.string.drain(start..end);
+            self.rebuild_fragments();
+        }
+    }
+    pub fn delete_last(&mut self) {
+        self.delete(self.grapheme_count().saturating_sub(1));
+    }
+    pub fn append(&mut self, other: &Self) {
+        self.string.push_str(&other.string);
+        self.rebuild_fragments();
+    }
+    pub fn split(&mut self, at: usize) -> Self {
+        if let Some(fragment) = self.fragments.get(at) {
+            let remainder = self.string.split_off(fragment.start_byte_idx);
+            self.rebuild_fragments();
+            Self::from(&remainder)
+        } else {
+            Self::default()
+        }
+    }
+    fn byte_idx_to_grapheme_idx(&self, byte_idx: usize) -> usize {
+        for (grapheme_idx, fragment) in self.fragments.iter().enumerate() {
+            if fragment.start_byte_idx >= byte_idx {
+                return grapheme_idx;
             }
         }
-        self.fragments = Self::str_to_fragments(&result);
-    }
-
-    pub fn delete_last(&mut self){
-        self.delete(self.grapheme_count().saturating_add(1));
-    }
-
-    pub fn append(&mut self, other: &Self) {
-        let mut concat = self.to_string();
-        concat.push_str(&other.to_string());
-        self.fragments = Self::str_to_fragments(&concat);
-    }
-    
-    pub fn split(&mut self, at: usize) -> Self {
-        if at > self.fragments.len() {
-            return Self::default();
+        #[cfg(debug_assertions)]
+        {
+            panic!("Invalid byte_idx passed to byte_idx_to_grapheme_idx: {byte_idx:?}");
         }
-        let remainder = self.fragments.split_off(at);
-        Self {
-            fragments: remainder,
+        #[cfg(not(debug_assertions))]
+        {
+            0
         }
+    }
+    pub fn search(&self, query: &str) -> Option<usize> {
+        self.string
+            .find(query)
+            .map(|byte_idx| self.byte_idx_to_grapheme_idx(byte_idx))
     }
 }
 
-impl fmt::Display for Line{
-    fn fmt (&self, formatter: &mut fmt::Formatter) -> fmt::Result{
-        let result: String = self
-        .fragments
-        .iter()
-        .map(|fragment| fragment.grapheme.clone())
-        .collect();
-    write!(formatter, "{result}")
+impl fmt::Display for Line {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        write!(formatter, "{}", self.string)
     }
 }
