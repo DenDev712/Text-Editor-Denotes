@@ -22,6 +22,7 @@ use line::Line;
 use position::Position;
 use size::Size;
 use messagebar::MessageBar;
+use position::{Col, Position, Row};
 use statusbar::StatusBar;
 use uicomponent::UIComponent;
 use terminal::Terminal;
@@ -30,6 +31,7 @@ use view::View;
 use self::command::{
     Command::{self, Edit, Move, System},
     Edit::InsertNewline,
+    Move::{Down, Right},
     System::{Dismiss,Quit, Resize, Save, Search},
 };
 
@@ -275,7 +277,7 @@ impl Editor {
     //search command and prompt handling 
     fn process_command_during_search(&mut self, command: Command) {
         match command {
-            System(Quit | Resize(_) | Search | Save) | Move(_) => {} // Not applicable during save, Resize already handled at this stage
+            
             System(Dismiss) => {
                 self.set_prompt(PromptType::None);
                 self.view.dismiss_search();
@@ -289,10 +291,12 @@ impl Editor {
                 let query = self.command_bar.value();
                 self.view.search(&query);
             }
+            Move(Right | Down) => self.view.search_next();
+            System(Quit | Resize(_) | Search | Save)| Move(_) => {}
         }
     }
 
-    //message and command bar
+    //message and command barvim
     fn update_message(&mut self, new_message: &str){
         self.message_bar.update_message(new_message);
     }
@@ -308,7 +312,7 @@ impl Editor {
             PromptType::Save => self.command_bar.set_prompt("Save as: "),
             PromptType::Search => {
                 self.view.enter_search();
-                self.command_bar.set_prompt("Search (Esc to cancel): ");
+                self.command_bar.set_prompt("Search (Esc to cancel, arrows to navigate): ");
             }
         }
         self.command_bar.clear_value();

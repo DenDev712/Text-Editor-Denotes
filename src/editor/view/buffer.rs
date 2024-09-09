@@ -5,6 +5,9 @@ use std::io::Write;
 use super::FileInfo;
 use super::Line;
 use super::Location;
+use std::fs::{read_to_string, File};
+use std::io::Error;
+use std::io::Write;
 
 #[derive(Default)]
 pub struct Buffer {
