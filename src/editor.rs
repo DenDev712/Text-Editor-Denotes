@@ -19,7 +19,6 @@ mod view;
 use documentstatus::DocumentStatus;
 use commandbar::CommandBar;
 use line::Line;
-use position::Position;
 use size::Size;
 use messagebar::MessageBar;
 use position::{Col, Position, Row};
@@ -291,7 +290,7 @@ impl Editor {
                 let query = self.command_bar.value();
                 self.view.search(&query);
             }
-            Move(Right | Down) => self.view.search_next();
+            Move(Right | Down) => self.view.search_next(),
             System(Quit | Resize(_) | Search | Save)| Move(_) => {}
         }
     }

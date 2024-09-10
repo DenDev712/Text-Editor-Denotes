@@ -1,5 +1,4 @@
-use std::{cmp::min, intrinsics::mir::PtrMetadata, io::Error};
-
+use std::{cmp::min, io::Error};
 use super::{
     command::{Edit, Move},
     Col, Row,DocumentStatus, Line, Position, Size, Terminal, UIComponent, NAME, VERSION,
@@ -87,24 +86,23 @@ impl View {
         }
     }
 
-    pub fn search_next(&mut self){
+    pub fn search_next(&mut self) {
         let step_right;
-
-        if let Some(search_info) = self.search_info.as_ref(){
+        if let Some(search_info) = self.search_info.as_ref() {
             step_right = min(search_info.query.grapheme_count(), 1);
-        }else{
+        } else {
             #[cfg(debug_assertions)]
             {
                 panic!("Attempting to search_next without search_info");
             }
-            #[cfg(debug_assertions)]
+            #[cfg(not(debug_assertions))]
             {
                 return;
             }
         }
-        let location = Location{
+        let location = Location {
             line_idx: self.text_location.line_idx,
-            grapheme_idx: self.text_location.grapheme_idx.saturating_add(step_right),
+            grapheme_idx: self.text_location.grapheme_idx.saturating_add(step_right), //Start the new search behind the current match
         };
         self.search_from(location);
     }
@@ -177,7 +175,7 @@ impl View {
         let new_len = self
             .buffer
             .lines
-            .get(self.text_location.line_index)
+            .get(self.text_location.line_idx)
             .map_or(0, Line::grapheme_count);
         let grapheme_delta = new_len.saturating_sub(old_len);
         if grapheme_delta > 0 {
@@ -243,7 +241,7 @@ impl View {
         let horizontal_mid = width.div_ceil(2);
         self.scroll_offset.row = row.saturating_sub(vertical_mid);
         self.scroll_offset.col = col.saturating_sub(horizontal_mid);
-        self.set_needs_redraw(true);
+        self.mark_redraw(true);
     }
     fn scroll_text_location_into_view(&mut self) {
         let Position { row, col } = self.text_location_to_position();
@@ -324,7 +322,7 @@ impl View {
     }
 
     fn snap_to_valid_line(&mut self) {
-        self.text_location.line_index = min(self.text_location.line_idx, self.buffer.height());
+        self.text_location.line_idx = min(self.text_location.line_idx, self.buffer.height());
     }
 
     // endregion
