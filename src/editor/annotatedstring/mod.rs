@@ -131,4 +131,4 @@ impl<'a> IntoIterator for &'a AnnotatedString {
             current_idx: 0,
         }
     }
-}1
+}
