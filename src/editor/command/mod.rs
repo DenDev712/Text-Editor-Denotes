@@ -1,5 +1,4 @@
 use crossterm::event::Event;
-Has conversation started by @pflenker.
 use std::convert::TryFrom;
 mod movecommand;
 pub use movecommand::Move;
@@ -14,7 +13,7 @@ pub enum Command {
     Edit(Edit),
     System(System),
 }
-// clippy::as_conversions: Will run into problems for rare edge case systems where usize < u16
+
 #[allow(clippy::as_conversions)]
 impl TryFrom<Event> for Command {
     type Error = String;
