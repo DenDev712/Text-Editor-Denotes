@@ -1,21 +1,22 @@
 use crossterm::event::{
-        KeyCode::{self, Char},
-        KeyEvent, KeyModifiers,
-    };
-    use super::super::Size;
-    #[derive(Clone, Copy)]
-    pub enum System {
-        Save,
-        Resize(Size),
-        Quit,
-        Dismiss,
-        Search,
-    }
-    impl TryFrom<KeyEvent> for System {
-        type Error = String;
-        fn try_from(event: KeyEvent) -> Result<Self, Self::Error> {
-            let KeyEvent {
-                code, modifiers, ..
+    KeyCode::{self, Char},
+    KeyEvent, KeyModifiers,
+};
+use super::super::Size;
+#[derive(Clone, Copy)]
+pub enum System {
+    Save,
+    Resize(Size),
+    Quit,
+    Dismiss,
+    Search,
+}
+    
+impl TryFrom<KeyEvent> for System {
+    type Error = String;
+    fn try_from(event: KeyEvent) -> Result<Self, Self::Error> {
+        let KeyEvent {
+            code, modifiers, ..
             } = event;
             if modifiers == KeyModifiers::CONTROL {
                 match code {
@@ -29,7 +30,7 @@ use crossterm::event::{
             } else {
                 Err(format!(
                     "Unsupported key code {code:?} or modifier {modifiers:?}"
-                ))
-            }
+            ))
         }
     }
+}
