@@ -1,6 +1,7 @@
 use std::io::Error;
 
-use super::{DocumentStatus, Size, Terminal, UIComponent};
+use super::super::{DocumentStatus, Size, Terminal};
+use super::UIComponent;
 
 #[derive(Default)]
 pub struct StatusBar {

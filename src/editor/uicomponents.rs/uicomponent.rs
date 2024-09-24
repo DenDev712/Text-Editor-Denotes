@@ -1,6 +1,6 @@
 use std::io::Error;
 
-use super::Size;
+use super::super::Size;
 pub trait UIComponent{
     //marks this component if it needs redrawing or not
     fn mark_redraw(&mut self, value: bool);

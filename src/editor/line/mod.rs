@@ -96,7 +96,7 @@ impl Line {
         let mut result = AnnotatedString::from(&self.string);
 
         if let Some(query) = query {
-            f !query.is_empty() {
+            if !query.is_empty() {
                 self.find_all(query, 0..self.string.len()).iter().for_each(
                     |(start_byte_idx, grapheme_idx)| {
                         if let Some(selected_match) = selected_match {

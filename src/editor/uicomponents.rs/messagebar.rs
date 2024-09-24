@@ -1,6 +1,7 @@
 use std::{io::Error, time::Duration, time::Instant};
 
-use super::{Size, Terminal, UIComponent};
+use super::super::{Size, Terminal};
+use super::UIComponent;
 //the message duration before hiding
 const DEFAULT_DURATION: Duration = Duration::new(5, 0);
 struct Message{

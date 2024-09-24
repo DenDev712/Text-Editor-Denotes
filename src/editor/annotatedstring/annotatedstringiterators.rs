@@ -1,6 +1,6 @@
 use std::cmp::min;
 
-use super::{Annotatedstring, AnnotatedStringPart};
+use super::{AnnotatedString, AnnotatedStringPart};
 pub struct AnnotatedStringIterator<'a> {
     pub annotated_string: &'a AnnotatedString,
     pub current_idx: usize,
