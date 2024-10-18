@@ -1,4 +1,4 @@
-use super::AnotationType;
+use super::AnnotationType;
 
 #[derive(Copy, Clone, Debug)]
 #[allow(clippy::struct_field_names)]

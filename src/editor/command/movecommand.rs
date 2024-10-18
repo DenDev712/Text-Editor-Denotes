@@ -1,13 +1,12 @@
 use crossterm::event::{
-    KeyCode::{Down, End, Home, Left, PageDown, PageUp, Right, Left},
+    KeyCode::{Down, End, Home, Left, PageDown, PageUp, Right, Up},
     KeyEvent, KeyModifiers,
 };
 
 #[derive(Clone, Copy)]
-
-pub enum Move{
-    PageDown,
+pub enum Move {
     PageUp,
+    PageDown,
     StartOfLine,
     EndOfLine,
     Up,
@@ -15,11 +14,10 @@ pub enum Move{
     Right,
     Down,
 }
-
-impl TryFrom<KeyEvent> for Move{
+impl TryFrom<KeyEvent> for Move {
     type Error = String;
-    fn try_from(value: KeyEvent) -> Result<Self, Self::Error> {
-        let KeyEvent{
+    fn try_from(event: KeyEvent) -> Result<Self, Self::Error> {
+        let KeyEvent {
             code, modifiers, ..
         } = event;
 

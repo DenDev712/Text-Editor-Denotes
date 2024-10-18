@@ -30,7 +30,7 @@ impl View {
     pub fn get_status(&self) -> DocumentStatus {
         DocumentStatus {
             total_lines: self.buffer.height(),
-            current_line_idx: self.text_location.line_idx,
+            current_line_index: self.text_location.line_idx,
             file_name: format!("{}", self.buffer.file_info),
             is_modified: self.buffer.dirty,
         }
@@ -50,7 +50,7 @@ impl View {
     }
     pub fn exit_search(&mut self) {
         self.search_info = None;
-        self.set_needs_redraw(true);
+        self.mark_redraw(true);
     }
     pub fn dismiss_search(&mut self) {
         if let Some(search_info) = &self.search_info {
@@ -59,7 +59,7 @@ impl View {
             self.scroll_text_location_into_view(); // ensure the previous location is still visible even if the terminal has been resized during search.
         }
         self.search_info = None;
-        self.set_needs_redraw(true);
+        self.mark_redraw(true);
     }
 
     pub fn search(&mut self, query: &str) {
@@ -98,7 +98,7 @@ impl View {
             self.text_location = location;
             self.center_text_location();
         };
-        self.set_needs_redraw(true);
+        self.mark_redraw(true);
     }
     pub fn search_next(&mut self) {
         let step_right = self
@@ -120,7 +120,7 @@ impl View {
     pub fn load(&mut self, file_name: &str) -> Result<(), Error> {
         let buffer = Buffer::load(file_name)?;
         self.buffer = buffer;
-        self.set_needs_redraw(true);
+        self.mark_redraw(true);
         Ok(())
     }
 
@@ -164,7 +164,7 @@ impl View {
     fn insert_newline(&mut self) {
         self.buffer.insert_newline(self.text_location);
         self.handle_move_command(Move::Right);
-        self.set_needs_redraw(true);
+        self.mark_redraw(true);
     }
     fn delete_backward(&mut self) {
         if self.text_location.line_idx != 0 || self.text_location.grapheme_idx != 0 {
@@ -174,7 +174,7 @@ impl View {
     }
     fn delete(&mut self) {
         self.buffer.delete(self.text_location);
-        self.set_needs_redraw(true);
+        self.mark_redraw(true);
     }
     fn insert_char(&mut self, character: char) {
         let old_len = self
@@ -193,7 +193,7 @@ impl View {
             //move right for an added grapheme (should be the regular case)
             self.handle_move_command(Move::Right);
         }
-        self.set_needs_redraw(true);
+        self.mark_redraw(true);
     }
     // endregion
 
@@ -231,7 +231,7 @@ impl View {
             false
         };
         if offset_changed {
-            self.set_needs_redraw(true);
+            self.mark_redraw(true);
         }
     }
     fn scroll_horizontally(&mut self, to: Col) {
@@ -246,7 +246,7 @@ impl View {
             false
         };
         if offset_changed {
-            self.set_needs_redraw(true);
+            self.mark_redraw(true);
         }
     }
     fn scroll_text_location_into_view(&mut self) {
@@ -261,7 +261,7 @@ impl View {
         let horizontal_mid = width.div_ceil(2);
         self.scroll_offset.row = row.saturating_sub(vertical_mid);
         self.scroll_offset.col = col.saturating_sub(horizontal_mid);
-        self.set_needs_redraw(true);
+        self.mark_redraw(true);
     }
     // endregion
 
@@ -355,7 +355,7 @@ impl View {
 }
 
 impl UIComponent for View {
-    fn set_needs_redraw(&mut self, value: bool) {
+    fn mark_redraw(&mut self, value: bool) {
         self.needs_redraw = value;
     }
 

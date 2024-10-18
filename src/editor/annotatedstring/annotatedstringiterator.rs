@@ -6,10 +6,10 @@ pub struct AnnotatedStringIterator<'a> {
     pub current_idx: usize,
 }
 
-impl <'a> AnnotatedStringIterator<'a>{
-    type item = AnnotatedStringPart<'a>;
+impl <'a> Iterator for AnnotatedStringIterator<'a>{
+    type Item = AnnotatedStringPart<'a>;
 
-    fn next(&mut self) -> Option<Self::item>{
+    fn next(&mut self) -> Option<Self::Item>{
         if self.current_idx >= self.annotated_string.string.len(){
             return None;
         }
@@ -20,7 +20,7 @@ impl <'a> AnnotatedStringIterator<'a>{
             .iter()
             .filter(|annotations|{
                 annotations.start_byte_idx <= self.current_idx
-                && annotation.end_byte_idx > self.current_idx
+                && annotations.end_byte_idx > self.current_idx
             })
             .last()
             {
@@ -45,7 +45,7 @@ impl <'a> AnnotatedStringIterator<'a>{
             self.current_idx = end_idx;
 
             Some(AnnotatedStringPart{
-                string: &self.annotatated_string.string[start_idx..end_idx],
+                string: &self.annotated_string.string[start_idx..end_idx],
                 annotation_type: None,
             })
     }

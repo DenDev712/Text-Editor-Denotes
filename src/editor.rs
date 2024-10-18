@@ -13,8 +13,8 @@ mod size;
 mod terminal;
 mod uicomponents;
 
-use::annotatedstring::{AnnotatedString, AnnotationType};
-use::uicomponents::{Commandbar, MessageBar, View, StatusBar, UiComponent};
+use annotatedstring::{AnnotatedString, AnnotationType};
+use uicomponents::{CommandBar, MessageBar, View, StatusBar, UIComponent};
 use documentstatus::DocumentStatus;
 use line::Line;
 use position::{Col, Position, Row};
