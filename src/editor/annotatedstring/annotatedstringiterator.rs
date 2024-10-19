@@ -1,9 +1,10 @@
+use crate::prelude::*;
 use std::cmp::min;
 
 use super::{AnnotatedString, AnnotatedStringPart};
 pub struct AnnotatedStringIterator<'a> {
     pub annotated_string: &'a AnnotatedString,
-    pub current_idx: usize,
+    pub current_idx: ByteIdx,
 }
 
 impl <'a> Iterator for AnnotatedStringIterator<'a>{
@@ -19,12 +20,11 @@ impl <'a> Iterator for AnnotatedStringIterator<'a>{
             .annotations
             .iter()
             .filter(|annotations|{
-                annotations.start_byte_idx <= self.current_idx
-                && annotations.end_byte_idx > self.current_idx
+                annotation.start <= self.current_idx && annotation.end > self.current_idx
             })
             .last()
             {
-                let end_idx = min(annotation.end_byte_idx, self.annotated_string.string.len());
+                let end_idx = min(annotation.end, self.annotated_string.string.len());
                 let start_idx = self.current_idx;
                 self.current_idx = end_idx;
 
@@ -37,8 +37,8 @@ impl <'a> Iterator for AnnotatedStringIterator<'a>{
             // Find the boundary of the nearest annotation
             let mut end_idx = self.annotated_string.string.len();
             for annotation in &self.annotated_string.annotations {
-                if annotation.start_byte_idx > self.current_idx && annotation.start_byte_idx < end_idx {
-                    end_idx = annotation.start_byte_idx;
+                if annotation.start > self.current_idx && annotation.start < end_idx {
+                    end_idx = annotation.start;
                 }
             }
             let start_idx = self.current_idx;
