@@ -6,7 +6,7 @@
     clippy::as_conversions, 
     clippy::integer_division
 )]
- //makes the module editor known to this one (it will look for editor.rs)
+
 mod editor;
 use editor::Editor;
 mod prelude;
