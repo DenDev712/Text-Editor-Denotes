@@ -11,7 +11,8 @@ use annotatedstringpart::AnnotatedStringPart;
 mod annotatedstringiterator;
 use annotatedstringiterator::AnnotatedStringIterator;
 
-use super::ByteIdx;
+
+use crate::prelude::ByteIdx;
 
 #[derive(Default, Debug)]
 pub struct AnnotatedString {
