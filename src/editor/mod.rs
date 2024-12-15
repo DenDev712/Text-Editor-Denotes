@@ -8,11 +8,12 @@ use std::{
 mod annotatedstring;
 pub mod annotationtype;
 mod command;
-mod documentstatus;
+pub mod documentstatus;
 mod line;
 mod terminal;
 mod uicomponents;
 pub use annotationtype::AnnotationType;
+mod filetype;
 mod annotation;
 use annotation::Annotation;
 

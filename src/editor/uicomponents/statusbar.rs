@@ -34,17 +34,21 @@ impl UIComponent for StatusBar{
     }
 
     fn draw(&mut self, origin_row: usize) -> Result<(), Error>{
-        let line_count = self.current_status.line_count();
-        let modified_indicator = self.current_status.modified_to_string();
+        let line_count = self.current_status.line_count_to_string();
+        let modified_indicator = self.current_status.modified_indicator_to_string();
         
         let begin = format!(
             "{} - {line_count} {modified_indicator}",
             self.current_status.file_name
         );
         
-        let position_indicator = self.current_status.position_to_string();
+        let position_indicator = self.current_status.position_indicator_to_string();
+
+        let file_type = self.current_status.file_type_to_string();
+        let back_part = format!("{file_type} | {position_indicator}");
+
         let remain_len = self.size.width.saturating_sub(begin.len());
-        let status = format!("{begin}{position_indicator:>remain_len$}");
+        let status = format!("{begin}{back_part:>remain_len$}");
 
         //will only print the status if it fits
         let to_print = if status.len() <= self.size.width{

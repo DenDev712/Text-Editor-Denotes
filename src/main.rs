@@ -10,7 +10,6 @@
 mod editor;
 use editor::Editor;
 mod prelude;
-
 fn main(){
     // calling a method on editor
     Editor::new().unwrap().run(); 
