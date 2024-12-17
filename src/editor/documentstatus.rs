@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-use super::FileType;
+use crate::editor::filetype::FileType;
 #[derive(Default, Eq, PartialEq, Debug)]
 pub struct DocumentStatus {
     pub total_lines: usize,
