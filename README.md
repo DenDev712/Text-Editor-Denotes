@@ -1,1 +1,1 @@
-Just a small project to learn rust :3
+Just a small project to learn rust
